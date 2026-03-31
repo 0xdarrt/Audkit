@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, Shield, Zap, Users, PieChart, 
   ChevronDown, Bell, CheckCircle, Smartphone, 
-  HelpCircle, Star, Lock, BellRing
+  HelpCircle, Star, Lock, BellRing, Wallet, X
 } from 'lucide-react';
+
+const fmtMoney = (val) => {
+  return new Intl.NumberFormat('en-IN').format(val);
+};
 
 const useScrollReveal = () => {
   const [revealed, setRevealed] = useState([]);
@@ -32,6 +36,34 @@ export default function Landing() {
   const navigate = useNavigate();
   const revealed = useScrollReveal();
   const [activeFaq, setActiveFaq] = useState(null);
+  
+  // Interactive Interactivity States
+  const [recoverySlider, setRecoverySlider] = useState(65); // % of recovered wealth
+  const [tiltStyle, setTiltStyle] = useState({ transform: 'rotateX(0deg) rotateY(0deg)' });
+  const [pulseIndex, setPulseIndex] = useState(0);
+
+  const handleMouseMove = (e) => {
+    const { clientX, clientY, currentTarget } = e;
+    const { left, top, width, height } = currentTarget.getBoundingClientRect();
+    const x = (clientX - left) / width - 0.5;
+    const y = (clientY - top) / height - 0.5;
+    setTiltStyle({ transform: `rotateX(${y * -15}deg) rotateY(${x * 15}deg)` });
+  };
+  
+  const resetTilt = () => setTiltStyle({ transform: 'rotateX(0deg) rotateY(0deg)' });
+
+  // Mock Family Activity Feed
+  const activityFeed = [
+    { user: 'Papa', action: 'added generic FD', val: '₹12,40,000', time: '2m ago' },
+    { user: 'System', action: 'maturity alert sent for', val: 'LIC Bond B-4', time: '12m ago' },
+    { user: 'Mom', action: 'synced gold vault', val: '400g SGB', time: '1h ago' },
+    { user: 'Audkit AI', action: 'analyzed leakage', val: '₹4,500 Saved', time: 'Just Now' }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setPulseIndex(p => (p + 1) % activityFeed.length), 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   const isVisible = (id) => revealed.includes(id);
 
@@ -48,6 +80,11 @@ export default function Landing() {
       {/* 3D Static Background Ornament */}
       <div style={{ position: 'fixed', top: '-10%', right: '-5%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(232, 197, 109, 0.05) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }}></div>
       <div style={{ position: 'fixed', bottom: '10%', left: '-5%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(180, 141, 232, 0.03) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }}></div>
+
+      {/* Floating Parallax Assets */}
+      <div className="floating" style={{ position: 'absolute', top: '15%', left: '10%', opacity: 0.2, zIndex: 0 }}><Wallet size={80} color="var(--accent)" /></div>
+      <div className="floating" style={{ position: 'absolute', top: '45%', right: '15%', opacity: 0.1, zIndex: 0, animationDelay: '1s' }}><PieChart size={120} color="var(--purple)" /></div>
+      <div className="floating" style={{ position: 'absolute', bottom: '20%', left: '20%', opacity: 0.15, zIndex: 0, animationDelay: '2s' }}><Shield size={60} color="var(--blue)" /></div>
 
       {/* Floating Navbar */}
       <nav style={{ 
@@ -109,37 +146,66 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* 3D Visual Mockup Placeholder */}
-        <div className={`floating reveal-section ${isVisible('hero') ? 'reveal-up' : ''}`} id="hero-img" style={{ 
-          marginTop: '80px', width: '100%', maxWidth: '1000px', height: '400px', 
-          background: 'linear-gradient(145deg, #1a1a19, #0f0f0e)', 
-          borderRadius: '32px', border: '1px solid var(--border2)', 
-          position: 'relative', boxShadow: '0 40px 100px rgba(0,0,0,0.8)' 
-        }}>
-           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.1 }}>
-              <PieChart size={200} />
-           </div>
-           {/* Abstract 3D Shapes */}
-           <div style={{ position: 'absolute', top: '-30px', left: '-30px', width: '120px', height: '120px', background: 'var(--accent)', borderRadius: '24px', filter: 'blur(60px)', opacity: 0.2 }}></div>
-           <div style={{ position: 'absolute', bottom: '100px', right: '50px', width: '150px', height: '150px', background: 'var(--purple)', borderRadius: '50%', filter: 'blur(50px)', opacity: 0.1 }}></div>
-           
-           <div style={{ display: 'flex', padding: '40px', gap: '24px', height: '100%' }}>
-              <div style={{ flex: 1, borderRight: '1px solid var(--border)', paddingRight: '24px' }}>
-                 <div className="card-value" style={{ fontSize: '48px', marginBottom: '8px', color: 'var(--accent)' }}>₹82,40,000</div>
-                 <div className="label" style={{ color: 'var(--text3)' }}>FAMILY NET WORTH</div>
+        {/* INTERACTIVE WEALTH PROJECTOR (REPLACES NET WORTH) */}
+        <div 
+          className={`perspective-1000 reveal-section ${isVisible('hero') ? 'reveal-up' : ''}`} 
+          id="hero-projector" 
+          onMouseMove={handleMouseMove}
+          onMouseLeave={resetTilt}
+          style={{ marginTop: '80px', width: '100%', display: 'flex', justifyContent: 'center' }}
+        >
+           <div className="tilt-card glass-panel" style={{ 
+             width: '100%', maxWidth: '800px', height: '420px', 
+             background: 'linear-gradient(135deg, rgba(24, 24, 23, 0.95), rgba(15, 15, 14, 0.98))', 
+             borderRadius: '32px', border: '1px solid var(--accent)', 
+             position: 'relative', overflow: 'hidden', display: 'flex', ...tiltStyle
+           }}>
+              {/* Animated Pulse Feed in Top Right */}
+              <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}>
+                 <div className="card-value" style={{ fontSize: '10px', color: 'var(--accent)', letterSpacing: '2px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div className="glow-ring" style={{ width: '12px', height: '12px' }}></div> FAMILY PULSE
+                 </div>
+                 <div className="fade-in" key={pulseIndex} style={{ background: 'var(--bg2)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center', width: '220px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                      {activityFeed[pulseIndex].user[0]}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text2)' }}><b>{activityFeed[pulseIndex].user}</b> {activityFeed[pulseIndex].action}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{activityFeed[pulseIndex].val}</div>
+                    </div>
+                 </div>
               </div>
-              <div style={{ flex: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                 {[
-                   { label: 'Fixed Deposits', val: '₹32L', color: 'var(--blue)' },
-                   { label: 'LIC Policies', val: '₹14L', color: 'var(--purple)' },
-                   { label: 'Gold Bonds', val: '₹28L', color: 'var(--accent)' },
-                   { label: 'Mutual Funds', val: '₹8L', color: 'var(--green)' }
-                 ].map((item, i) => (
-                   <div key={i} className="interactive-card" style={{ background: 'var(--bg2)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: '4px' }}>{item.label}</div>
-                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: item.color }}>{item.val}</div>
-                   </div>
-                 ))}
+
+              {/* Main Recovery UI */}
+              <div style={{ flex: 1, padding: '48px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'left' }}>
+                  <h3 className="section-title" style={{ fontSize: '32px', color: 'var(--accent)', marginBottom: '12px' }}>Illumination Mode</h3>
+                  <p style={{ color: 'var(--text3)', fontSize: '14px', maxWidth: '300px', marginBottom: '32px' }}>Billions are lost to "Forgotten Wealth" in India. Slide to see how much of your family vault you can recover from the shadows.</p>
+                  
+                  <div style={{ width: '100%', maxWidth: '350px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', color: 'var(--text2)', fontWeight: 'bold' }}>
+                      <span>HIDDEN WEALTH RECOVERY</span>
+                      <span>{recoverySlider}%</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" 
+                      value={recoverySlider} 
+                      onChange={(e) => setRecoverySlider(e.target.value)}
+                      style={{ width: '100%', height: '6px', background: 'var(--bg2)', borderRadius: '5px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                    />
+                  </div>
+              </div>
+
+              {/* Visual Result Visualization */}
+              <div style={{ flex: 1, background: 'rgba(232, 197, 109, 0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border)', position: 'relative' }}>
+                  <div className="shimmer-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.3 }}></div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--accent)', letterSpacing: '3px', marginBottom: '8px' }}>POTENTIAL RECOVERY</div>
+                    <div className="hero-title" style={{ fontSize: '64px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '32px', color: 'var(--text3)' }}>₹</span>
+                      {fmtMoney(Math.floor(8240000 * (recoverySlider / 100)))}
+                    </div>
+                    <div style={{ color: 'var(--text3)', fontSize: '12px', marginTop: '16px' }}>BASED ON AVERAGE INDIAN FAMILY ASSETS</div>
+                  </div>
               </div>
            </div>
         </div>
@@ -170,6 +236,37 @@ export default function Landing() {
                <h3 className="section-title" id="family-sync">Opaque Ownership</h3>
                <p style={{ color: 'var(--text2)', marginTop: '12px' }}>Easily split and track assets held across multiple family members with different tax brackets.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COMPARISON SLIDER / STORYTELLING */}
+      <section id="comparison" className="reveal-section" style={{ padding: '80px 24px', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+          <div className={`card glass-panel ${isVisible('comparison') ? 'reveal-left' : ''}`} style={{ flex: 1, padding: '40px', position: 'relative', overflow: 'hidden' }}>
+             <div style={{ position: 'absolute', top: 12, left: 12, padding: '4px 12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--red)', fontSize: '10px', borderRadius: '4px', fontWeight: 'bold' }}>TRADITIONAL FAMILY</div>
+             <h4 className="section-title" style={{ marginTop: '24px', marginBottom: '24px' }}>The "Excel & Whatsapp" Chaos</h4>
+             <div style={{ display: 'grid', gap: '12px' }}>
+                {['Maturity date forgotten', 'Physical receipt lost', 'Nominee details unknown'].map((t, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', color: 'var(--text3)', fontSize: '13px' }}>
+                    <X size={16} color="var(--red)" /> {t}
+                  </div>
+                ))}
+             </div>
+             <div style={{ marginTop: '32px', height: '80px', border: '1px dashed var(--red)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)', fontSize: '11px', opacity: 0.5 }}>₹ LOSS CALCULATED</div>
+          </div>
+
+          <div className={`card ${isVisible('comparison') ? 'reveal-right' : ''}`} style={{ flex: 1, padding: '40px', border: '2px solid var(--accent)', background: 'linear-gradient(135deg, #1a1a19, #111)' }}>
+             <div style={{ position: 'absolute', top: 12, left: 12, padding: '4px 12px', background: 'rgba(232, 197, 109, 0.1)', color: 'var(--accent)', fontSize: '10px', borderRadius: '4px', fontWeight: 'bold' }}>AUDKIT FAMILY</div>
+             <h4 className="section-title" style={{ marginTop: '24px', marginBottom: '24px' }}>The Sovereign Vault</h4>
+             <div style={{ display: 'grid', gap: '12px' }}>
+                {['Single Source of Truth', 'Multi-Generation Sync', 'Zero-Penalty Auto Alerts'].map((t, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', color: 'var(--text2)', fontSize: '13px' }}>
+                    <CheckCircle size={16} color="var(--accent)" /> {t}
+                  </div>
+                ))}
+             </div>
+             <button className="btn-primary" style={{ marginTop: '32px', width: '100%', padding: '12px' }} onClick={() => navigate('/auth')}>Secure Your Vault</button>
           </div>
         </div>
       </section>
