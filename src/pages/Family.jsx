@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../hooks/useData';
 import { supabase } from '../utils/supabase';
 import PaywallModal from '../components/PaywallModal';
+import { Trash } from 'lucide-react';
 
 const fmtMoney = (val) => new Intl.NumberFormat('en-IN').format(val);
 
@@ -63,6 +64,17 @@ export default function Family() {
     }
   };
 
+  const handleDeleteMember = async (memberId) => {
+    if (!window.confirm('Are you sure you want to remove this family member? Their asset assignments will be unlinked.')) return;
+    try {
+      await supabase.from('asset_members').delete().eq('member_id', memberId);
+      await supabase.from('members').delete().eq('id', memberId);
+      reloadData();
+    } catch (err) {
+      alert('Error removing member: ' + err.message);
+    }
+  };
+
   return (
     <div className="screen fade-in active">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -83,7 +95,15 @@ export default function Family() {
           const strokeDashoffset = circumference - (pct / 100) * circumference;
           
           return (
-            <div key={m.id} className="flip-card-container" style={{ height: '240px' }}>
+            <div key={m.id} className="flip-card-container" style={{ height: '240px', position: 'relative' }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleDeleteMember(m.id); }}
+                className="btn-ghost"
+                style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10, padding: '6px', border: 'none', background: 'rgba(0,0,0,0.4)', borderRadius: '50%', color: 'var(--red)', cursor: 'pointer', opacity: 0.6, transition: '0.2s' }}
+                title="Remove member"
+              >
+                <Trash size={14} />
+              </button>
               <div className="flip-card-inner">
                 {/* FRONT: Identity */}
                 <div className="flip-card-front">

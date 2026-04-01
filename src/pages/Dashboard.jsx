@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../hooks/useData';
+import { useGoals } from '../hooks/useGoals';
 import { useNavigate } from 'react-router-dom';
+import GoalsSection from '../components/GoalsSection';
+import HealthScoreWidget from '../components/HealthScoreWidget';
+import PaywallModal from '../components/PaywallModal';
 
 const typeColors = {
   'FD': '#6db0e8', 'LIC': '#b48de8', 'SGB': '#e8c56d', 'MF': '#4ecb8d', 'PPF': '#e8685a'
@@ -22,9 +26,11 @@ const getDays = (dateStr) => {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const { assets, loading } = useData();
+  const { user, isPremium } = useAuth();
+  const { assets, members, loading } = useData();
+  const { goals } = useGoals();
   const navigate = useNavigate();
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
 
@@ -77,6 +83,12 @@ export default function Dashboard() {
           <span className="section-title" style={{ fontSize: '14px', color: 'var(--text2)' }}>Manage Assets</span>
         </div>
       </div>
+
+      {/* Goals Section */}
+      <GoalsSection assets={assets} onPaywall={() => setPaywallOpen(true)} />
+
+      {/* Health Score Widget */}
+      <HealthScoreWidget assets={assets} members={members} goals={goals} onPaywall={() => setPaywallOpen(true)} />
 
       <div className="chart-row">
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -159,6 +171,8 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+
+      {paywallOpen && <PaywallModal onClose={() => setPaywallOpen(false)} />}
     </div>
   );
 }

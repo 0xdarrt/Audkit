@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../context/AuthContext';
 import PaywallModal from '../components/PaywallModal';
-import { Mail, BellRing, Settings } from 'lucide-react';
+import RateComparisonTable from '../components/RateComparisonTable';
+import { Mail, BellRing, ArrowRight } from 'lucide-react';
 
 const fmtMoney = (val) => new Intl.NumberFormat('en-IN').format(val);
 const getDays = (dateStr) => {
@@ -15,7 +16,8 @@ export default function Reminders() {
   const { isPremium } = useAuth();
   const { assets, loading } = useData();
   const [paywallOpen, setPaywallOpen] = useState(false);
-  const [previewMsg, setPreviewMsg] = useState(null); // stores asset object if open
+  const [previewMsg, setPreviewMsg] = useState(null);
+  const [rateAsset, setRateAsset] = useState(null); // for rate comparison modal
 
   if(loading) return <div className="loader-container">Loading reminders...</div>;
 
@@ -36,19 +38,6 @@ export default function Reminders() {
         <div>
           <h2 className="page-heading">Maturity Reminders</h2>
           <div style={{ color: 'var(--text2)', marginTop: '8px' }}>Action required on items approaching maturity.</div>
-        </div>
-        <div 
-          onClick={() => {
-            if (!isPremium) setPaywallOpen(true);
-            else alert("Enterprise Email & SMS workflow is active!");
-          }} 
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg2)', padding: '8px 16px', borderRadius: '30px', border: '1px solid var(--border)', cursor: 'pointer' }}
-        >
-          <BellRing size={16} color="var(--accent)" />
-          <span style={{ fontSize: '13px', fontWeight: 500 }}>Alert Settings</span>
-          <div style={{ width: '36px', height: '20px', background: isPremium ? 'var(--green)' : 'var(--text3)', borderRadius: '20px', position: 'relative' }}>
-            <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', right: isPremium ? '2px' : 'auto', left: isPremium ? 'auto' : '2px', top: '2px' }}></div>
-          </div>
         </div>
       </div>
 
@@ -86,12 +75,39 @@ export default function Reminders() {
               <div className="urgency-bar-container">
                 <div className="urgency-bar-fill" style={{ width: `${pct}%`, background: fillCol }}></div>
               </div>
+              {a.type === 'FD' && days <= 30 && (
+                <button 
+                  className="btn-ghost" 
+                  style={{ marginTop: '8px', padding: '4px 12px', fontSize: '11px', gap: '4px', color: 'var(--accent)', borderColor: 'rgba(232, 197, 109, 0.3)' }}
+                  onClick={() => setRateAsset(a)}
+                >
+                  See better rates <ArrowRight size={12} />
+                </button>
+              )}
             </div>
           );
         })}
       </div>
 
       {paywallOpen && <PaywallModal onClose={() => setPaywallOpen(false)} />}
+
+      {/* Rate Comparison Modal */}
+      {rateAsset && (
+        <div className="modal-overlay" onClick={(e) => { if(e.target === e.currentTarget) setRateAsset(null) }}>
+          <div className="modal-box fade-in" style={{ maxWidth: '600px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="section-title">Reinvest: {rateAsset.name}</h3>
+              <button className="btn-ghost" style={{ padding: '6px', border: 'none' }} onClick={() => setRateAsset(null)}>✕</button>
+            </div>
+            <RateComparisonTable
+              maturingAmount={rateAsset.amount || 0}
+              currentRate={rateAsset.rate || 0}
+              assetId={rateAsset.id}
+              onPaywall={() => { setRateAsset(null); setPaywallOpen(true); }}
+            />
+          </div>
+        </div>
+      )}
 
       {previewMsg && (
         <div className="modal-overlay" onClick={(e) => { if(e.target === e.currentTarget) setPreviewMsg(null) }}>

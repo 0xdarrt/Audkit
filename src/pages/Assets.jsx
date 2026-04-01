@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../hooks/useData';
+import { useGoals } from '../hooks/useGoals';
 import { supabase } from '../utils/supabase';
 import PaywallModal from '../components/PaywallModal';
-import { Search, SortDesc, Download, X, Edit, Trash, ArrowRight, Wallet, Activity, IndianRupee, Home, Utensils, Bus, Zap, Clapperboard, HeartPulse, BellRing, MoreHorizontal, ShoppingCart, Check } from 'lucide-react';
+import RateComparisonTable from '../components/RateComparisonTable';
+import { Search, SortDesc, Download, X, Edit, Trash, ArrowRight, Wallet, Activity, IndianRupee, Home, Utensils, Bus, Zap, Clapperboard, HeartPulse, BellRing, MoreHorizontal, ShoppingCart, Check, Target } from 'lucide-react';
 
 const typeColors = {
   'FD': '#6db0e8', 'LIC': '#b48de8', 'SGB': '#e8c56d', 'MF': '#4ecb8d', 'PPF': '#e8685a'
@@ -38,6 +40,7 @@ const calculateMaturity = (asset) => {
 export default function Assets() {
   const { user, isPremium } = useAuth();
   const { assets, expenses, members, loading, reloadData } = useData();
+  const { goals } = useGoals();
   
   const [activeTab, setActiveTab] = useState('portfolio'); // 'portfolio' | 'cashflow'
 
@@ -158,6 +161,7 @@ export default function Assets() {
       start_date: formVals.get('start_date') || null,
       maturity_date: formVals.get('maturity_date') || null,
       notes: formVals.get('notes') || null,
+      goal_id: formVals.get('goal_id') || null,
       user_id: user.id
     };
 
@@ -604,6 +608,15 @@ export default function Assets() {
                   <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Notes</label>
                   <input name="notes" type="text" className="form-control" defaultValue={formData.notes || ''} />
                 </div>
+                <div>
+                  <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Link to Goal</label>
+                  <select name="goal_id" className="form-control" defaultValue={formData.goal_id || ''}>
+                    <option value="">No goal</option>
+                    {goals.map(g => (
+                      <option key={g.id} value={g.id}>{g.icon} {g.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <button type="submit" className="btn-primary" style={{ marginTop: '16px' }} disabled={saving || members.length === 0}>
                   {saving ? 'Saving...' : 'Save Asset'}
                 </button>
@@ -728,7 +741,15 @@ export default function Assets() {
             
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <div style={{ marginBottom: '16px' }}>{renderChip(selectedAsset?.type || 'Other', typeColors)}</div>
-              <h1 className="page-heading" style={{ fontSize: '32px', marginBottom: '24px' }}>{selectedAsset?.name || 'Unnamed Asset'}</h1>
+              <h1 className="page-heading" style={{ fontSize: '32px', marginBottom: '8px' }}>{selectedAsset?.name || 'Unnamed Asset'}</h1>
+              {selectedAsset?.goal_id && (() => {
+                const linkedGoal = goals.find(g => g.id === selectedAsset.goal_id);
+                return linkedGoal ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(232, 197, 109, 0.1)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', color: 'var(--accent)', marginBottom: '16px' }}>
+                    <Target size={12} /> Part of: {linkedGoal.icon} {linkedGoal.name}
+                  </div>
+                ) : null;
+              })()}
               
               <div className="card" style={{ background: 'var(--bg3)', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -779,6 +800,22 @@ export default function Assets() {
                 <div className="card" style={{ padding: '16px', background: 'transparent', marginBottom: '24px' }}>
                   <div className="label" style={{ color: 'var(--text3)', marginBottom: '8px' }}>NOTES</div>
                   <div style={{ color: 'var(--text2)', fontStyle: 'italic', fontSize: '13px' }}>"{selectedAsset.notes}"</div>
+                </div>
+              )}
+
+              {/* FD REFERRAL ENGINE — only for FDs within 60 days of maturity */}
+              {selectedAsset?.type === 'FD' && getDays(selectedAsset?.maturity_date) > 0 && getDays(selectedAsset?.maturity_date) <= 60 && (
+                <div className="card" style={{ padding: '16px', background: 'transparent', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <div className="label" style={{ color: 'var(--text3)' }}>REINVESTMENT OPTIONS</div>
+                    <span style={{ fontSize: '9px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', background: 'rgba(232, 197, 109, 0.15)', color: 'var(--accent)' }}>NEW</span>
+                  </div>
+                  <RateComparisonTable
+                    maturingAmount={selectedAsset?.amount || 0}
+                    currentRate={selectedAsset?.rate || 0}
+                    assetId={selectedAsset?.id}
+                    onPaywall={() => setPaywallOpen(true)}
+                  />
                 </div>
               )}
             </div>
