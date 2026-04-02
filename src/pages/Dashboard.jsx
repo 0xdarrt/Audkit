@@ -109,13 +109,13 @@ export default function Dashboard() {
     return () => window.removeEventListener('keydown', handler);
   }, [triggerRain]);
 
-  if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
-
-  // Projected values
+  // Projected values (must be above loading guard — hooks can't be conditional)
   const projectedTotal = useMemo(() => {
     if (projectionYears === 0) return total;
     return assets.reduce((s, a) => s + projectAssetValue(a, projectionYears), 0);
   }, [assets, projectionYears, total]);
+
+  if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
 
   const getProjectedSum = (type) => {
     const sub = assets.filter(a => a.type === type);
