@@ -36,8 +36,6 @@ export default function Dashboard() {
   const [showRain, setShowRain] = useState(false);
   const [rainDelta, setRainDelta] = useState(0);
 
-  if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
-
   const total = assets.reduce((s, a) => s + Number(a.amount), 0);
 
   // ═══ RUPEE RAIN TRIGGER ═══
@@ -86,6 +84,8 @@ export default function Dashboard() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [triggerRain]);
+
+  if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
 
   // Allocation Donut
   const sums = {};
