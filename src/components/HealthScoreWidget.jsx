@@ -64,6 +64,123 @@ export default function HealthScoreWidget({ assets, members, goals, onPaywall })
         )}
       </div>
 
+      {/* ═══ WEALTH PULSE ═══ */}
+      {(() => {
+        const score = result.total;
+        const orbR = 20 + (score / 100) * 40;
+        const pulseSpeed = Math.max(1.5, 4 - score / 50);
+        const totalPortfolio = assets.reduce((s, a) => s + Number(a.amount || 0), 0);
+        
+        const orbitalTypes = [
+          { type: 'FD', color: '#6db0e8', r: 80, speed: 20 },
+          { type: 'SGB', color: '#e8c56d', r: 95, speed: 35 },
+          { type: 'MF', color: '#4ecb8d', r: 110, speed: 28 },
+        ].map(o => {
+          const typeTotal = assets.filter(a => a.type === o.type).reduce((s, a) => s + Number(a.amount || 0), 0);
+          const pct = totalPortfolio > 0 ? (typeTotal / totalPortfolio) * 100 : 0;
+          return { ...o, pct };
+        }).filter(o => o.pct > 0);
+
+        return (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+            <svg viewBox="0 0 400 240" width="400" height="240" style={{ maxWidth: '100%' }}>
+              <defs>
+                <radialGradient id="orb-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#e8c56d" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#e8c56d" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              
+              {/* Soft halo for high scores */}
+              {score > 80 && (
+                <circle cx="200" cy="120" r={orbR + 25} fill="rgba(232, 197, 109, 0.04)" />
+              )}
+              {score > 60 && (
+                <circle cx="200" cy="120" r={orbR + 15} fill="url(#orb-glow)" />
+              )}
+
+              {/* Orbital Rings */}
+              {orbitalTypes.map((o, i) => {
+                const circumference = 2 * Math.PI * o.r;
+                const dashLen = circumference * (o.pct / 100);
+                const sw = 2 + (o.pct / 100) * 8;
+                return (
+                  <g key={o.type} style={{
+                    transformOrigin: '200px 120px',
+                    animation: `orbit-spin ${o.speed}s linear infinite${i % 2 === 1 ? ' reverse' : ''}`
+                  }}>
+                    {/* Faint full ring */}
+                    <circle cx="200" cy="120" r={o.r} fill="none"
+                      stroke={o.color} strokeOpacity="0.06" strokeWidth={sw * 0.5} />
+                    {/* Active arc */}
+                    <circle cx="200" cy="120" r={o.r} fill="none"
+                      stroke={o.color} strokeOpacity="0.5" strokeWidth={sw}
+                      strokeDasharray={`${dashLen} ${circumference - dashLen}`}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dasharray 1.5s ease-out' }}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Central orb */}
+              <circle cx="200" cy="120" r={orbR} 
+                fill="rgba(232, 197, 109, 0.12)" 
+                stroke="#e8c56d" strokeWidth="1.5" strokeOpacity="0.6"
+                style={{
+                  transformOrigin: '200px 120px',
+                  animation: `breathe ${pulseSpeed}s ease-in-out infinite`
+                }}
+              />
+
+              {/* Inner shimmer ring */}
+              <circle cx="200" cy="120" r={orbR * 0.6}
+                fill="none" stroke="#e8c56d" strokeWidth="0.5" strokeOpacity="0.2"
+                strokeDasharray="4 6"
+                style={{
+                  transformOrigin: '200px 120px',
+                  animation: 'orbit-spin 8s linear infinite reverse'
+                }}
+              />
+
+              {/* Score text */}
+              <text x="200" y="115" textAnchor="middle" dominantBaseline="central"
+                fontFamily="'DM Serif Display', serif" fontSize="32" fill="#e8c56d"
+                style={{ textShadow: '0 0 20px rgba(232, 197, 109, 0.3)' }}
+              >
+                {animatedScore}
+              </text>
+              <text x="200" y="140" textAnchor="middle" dominantBaseline="central"
+                fontFamily="'Sora', sans-serif" fontSize="11" fill="#9e9b93"
+                letterSpacing="2"
+              >
+                {result.grade}
+              </text>
+
+              {/* Type labels on orbital rings */}
+              {orbitalTypes.map(o => (
+                <text key={`lbl-${o.type}`} x="200" y={120 - o.r - 6} textAnchor="middle"
+                  fontFamily="'Sora', sans-serif" fontSize="8" fill={o.color} fillOpacity="0.5"
+                >
+                  {o.type} {o.pct.toFixed(0)}%
+                </text>
+              ))}
+            </svg>
+
+            <style>{`
+              @keyframes breathe {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.08); }
+              }
+              @keyframes orbit-spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        );
+      })()}
+
       <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Score Ring */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '180px' }}>

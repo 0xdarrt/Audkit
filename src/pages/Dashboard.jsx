@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../hooks/useData';
 import { useGoals } from '../hooks/useGoals';
@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import GoalsSection from '../components/GoalsSection';
 import HealthScoreWidget from '../components/HealthScoreWidget';
 import PaywallModal from '../components/PaywallModal';
+import RupeeRain from '../components/RupeeRain';
+import { supabase } from '../utils/supabase';
 
 const typeColors = {
   'FD': '#6db0e8', 'LIC': '#b48de8', 'SGB': '#e8c56d', 'MF': '#4ecb8d', 'PPF': '#e8685a'
@@ -31,10 +33,59 @@ export default function Dashboard() {
   const { goals } = useGoals();
   const navigate = useNavigate();
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [showRain, setShowRain] = useState(false);
+  const [rainDelta, setRainDelta] = useState(0);
 
   if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
 
   const total = assets.reduce((s, a) => s + Number(a.amount), 0);
+
+  // ═══ RUPEE RAIN TRIGGER ═══
+  const triggerRain = useCallback((delta) => {
+    setRainDelta(delta);
+    setShowRain(true);
+  }, []);
+
+  useEffect(() => {
+    if (loading || assets.length === 0) return;
+
+    const monthKey = `celebration_shown_${new Date().getFullYear()}_${new Date().getMonth()}_${user?.id}`;
+    if (localStorage.getItem(monthKey)) return;
+
+    // Check against previous month's score_history
+    (async () => {
+      try {
+        const { data: history } = await supabase
+          .from('score_history')
+          .select('total_value')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        const lastVal = history?.[0]?.total_value || 0;
+        const delta = total - lastVal;
+
+        if (delta > 1000) {
+          triggerRain(delta);
+          localStorage.setItem(monthKey, 'true');
+        }
+      } catch {
+        // score_history table may not exist yet — silently skip
+      }
+    })();
+  }, [loading, total, user?.id]);
+
+  // Hidden keyboard shortcut for testing: Ctrl+Shift+R
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        triggerRain(25000);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [triggerRain]);
 
   // Allocation Donut
   const sums = {};
@@ -53,6 +104,7 @@ export default function Dashboard() {
 
   return (
     <div className="screen fade-in active">
+      {showRain && <RupeeRain delta={rainDelta} onComplete={() => setShowRain(false)} />}
       <div className="dash-header">
         <div>
           <div className="welcome-text">Good morning, <span id="lbl-user">{user.email.split('@')[0]}</span></div>
