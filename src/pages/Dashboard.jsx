@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../hooks/useData';
 import { useGoals } from '../hooks/useGoals';
@@ -27,6 +27,29 @@ const getDays = (dateStr) => {
   return Math.ceil(ms / 86400000);
 };
 
+const projectAssetValue = (asset, years) => {
+  if (years <= 0) return Number(asset.amount || 0);
+  const amt = Number(asset.amount || 0);
+  const rate = Number(asset.rate || 0);
+  switch (asset.type) {
+    case 'FD': case 'SGB': case 'PPF': case 'MF':
+      return amt * Math.pow(1 + rate / 100, years);
+    case 'LIC':
+      return amt; // Sum assured — fixed payout
+    case 'CHIT': {
+      const totalMonths = asset.chit_total_months || 20;
+      const currentMonth = asset.chit_current_month || 1;
+      const monthsFromNow = years * 12;
+      if (currentMonth + monthsFromNow >= totalMonths) return 0; // Chit completed
+      return Number(asset.chit_total_value || amt);
+    }
+    case 'LOAN_GIVEN':
+      return amt - Number(asset.loan_partial_returned || 0); // Static
+    default:
+      return amt * Math.pow(1 + rate / 100, years);
+  }
+};
+
 export default function Dashboard() {
   const { user, isPremium } = useAuth();
   const { assets, members, loading } = useData();
@@ -35,6 +58,7 @@ export default function Dashboard() {
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [showRain, setShowRain] = useState(false);
   const [rainDelta, setRainDelta] = useState(0);
+  const [projectionYears, setProjectionYears] = useState(0);
 
   const total = assets.reduce((s, a) => s + Number(a.amount), 0);
 
@@ -87,9 +111,23 @@ export default function Dashboard() {
 
   if (loading) return <div className="loader-container">Syncing with Supabase...</div>;
 
+  // Projected values
+  const projectedTotal = useMemo(() => {
+    if (projectionYears === 0) return total;
+    return assets.reduce((s, a) => s + projectAssetValue(a, projectionYears), 0);
+  }, [assets, projectionYears, total]);
+
+  const getProjectedSum = (type) => {
+    const sub = assets.filter(a => a.type === type);
+    if (projectionYears === 0) return sub.reduce((s, a) => s + Number(a.amount), 0);
+    return sub.reduce((s, a) => s + projectAssetValue(a, projectionYears), 0);
+  };
+
+  const isProjected = projectionYears > 0;
+
   // Allocation Donut
   const sums = {};
-  assets.forEach(a => sums[a.type] = (sums[a.type] || 0) + Number(a.amount));
+  assets.forEach(a => sums[a.type] = (sums[a.type] || 0) + (isProjected ? projectAssetValue(a, projectionYears) : Number(a.amount)));
   let cumP = 0;
   const sortedTypes = Object.entries(sums).sort((a,b)=>b[1]-a[1]);
 
@@ -107,19 +145,86 @@ export default function Dashboard() {
       {showRain && <RupeeRain delta={rainDelta} onComplete={() => setShowRain(false)} />}
       <div className="dash-header">
         <div>
-          <div className="welcome-text">Good morning, <span id="lbl-user">{user.email.split('@')[0]}</span></div>
-          <div className="net-worth-number" style={{ color: 'var(--accent)', fontSize: '48px' }}>₹{total === 0 ? '—' : exactMoney(total)}</div>
+          <div className="welcome-text">
+            Good morning, <span id="lbl-user">{user.email.split('@')[0]}</span>
+            {isProjected && <span style={{ fontSize: '12px', color: 'var(--accent)', marginLeft: '8px', fontWeight: 'bold' }}>• {projectionYears}yr projection</span>}
+          </div>
+          <div className="net-worth-number" style={{ color: 'var(--accent)', fontSize: '48px', transition: 'all 0.3s' }}>
+            ₹{projectedTotal === 0 ? '—' : exactMoney(Math.round(projectedTotal))}
+          </div>
+          {isProjected && (
+            <div style={{ fontSize: '13px', color: 'var(--green)', marginTop: '4px' }}>
+              +₹{exactMoney(Math.round(projectedTotal - total))} growth in {projectionYears} {projectionYears === 1 ? 'year' : 'years'}
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* ═══ NET WORTH TIME MACHINE ═══ */}
+      <div className="card" style={{ marginBottom: '24px', padding: '20px 24px', background: 'var(--bg2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '16px' }}>⏳</span>
+            <span className="section-title" style={{ fontSize: '14px' }}>Net Worth Time Machine</span>
+          </div>
+          <span style={{
+            fontFamily: "'DM Serif Display', serif", fontSize: '18px',
+            color: isProjected ? 'var(--accent)' : 'var(--text3)',
+            transition: 'color 0.3s'
+          }}>
+            {isProjected ? `${projectionYears} ${projectionYears === 1 ? 'year' : 'years'} ahead` : 'Today'}
+          </span>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="range" min="0" max="10" step="1"
+            value={projectionYears}
+            onChange={(e) => setProjectionYears(Number(e.target.value))}
+            style={{
+              width: '100%', height: '6px', appearance: 'none', background: 'var(--bg)',
+              borderRadius: '3px', outline: 'none', cursor: 'pointer',
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text3)' }}>Today</span>
+            <span style={{ fontSize: '10px', color: 'var(--text3)' }}>5 years</span>
+            <span style={{ fontSize: '10px', color: 'var(--text3)' }}>10 years</span>
+          </div>
+        </div>
+        <style>{`
+          input[type='range']::-webkit-slider-thumb {
+            appearance: none; width: 20px; height: 20px; border-radius: 50%;
+            background: #e8c56d; border: 3px solid #0f0f0e;
+            box-shadow: 0 0 12px rgba(232,197,109,0.4);
+            cursor: pointer; margin-top: -7px;
+          }
+          input[type='range']::-webkit-slider-runnable-track {
+            height: 6px; border-radius: 3px;
+            background: linear-gradient(to right, #e8c56d ${projectionYears * 10}%, rgba(255,255,255,0.06) ${projectionYears * 10}%);
+          }
+          input[type='range']::-moz-range-thumb {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #e8c56d; border: 3px solid #0f0f0e;
+            box-shadow: 0 0 12px rgba(232,197,109,0.4); cursor: pointer;
+          }
+          input[type='range']::-moz-range-track {
+            height: 6px; border-radius: 3px;
+            background: linear-gradient(to right, #e8c56d ${projectionYears * 10}%, rgba(255,255,255,0.06) ${projectionYears * 10}%);
+          }
+        `}</style>
       </div>
 
       <div className="dash-grid-6">
         {['FD', 'LIC', 'SGB', 'MF', 'PPF'].map(t => {
           const sub = assets.filter(a => a.type === t);
-          const sum = sub.reduce((s, a) => s + Number(a.amount), 0);
+          const sum = getProjectedSum(t);
           return (
             <div key={t} className={`card metric-card ${t.toLowerCase()}`}>
-              <div className="label" style={{ color: 'var(--text2)' }}>{t} Portfolio</div>
-              <div className="net-worth-number" style={{ fontSize: '24px' }}>{fmtMoney(sum)}</div>
+              <div className="label" style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {t} Portfolio
+                {isProjected && <span style={{ fontSize: '8px', fontWeight: 'bold', padding: '1px 6px', borderRadius: '4px', background: 'rgba(232, 197, 109, 0.12)', color: 'var(--accent)' }}>PROJECTED</span>}
+              </div>
+              <div className="net-worth-number" style={{ fontSize: '24px', transition: 'all 0.3s' }}>{fmtMoney(Math.round(sum))}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                 <span className="label" style={{ color: 'var(--text3)' }}>{sub.length} active</span>
               </div>
