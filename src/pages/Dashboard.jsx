@@ -74,6 +74,41 @@ export default function Dashboard() {
             </div>
           );
         })}
+
+        {/* Chit Fund Card */}
+        {(() => {
+          const chits = assets.filter(a => a.type === 'CHIT');
+          const monthlyOutflow = chits.reduce((s, a) => s + Number(a.chit_monthly_installment || 0), 0);
+          return chits.length > 0 ? (
+            <div className="card metric-card" style={{ borderLeft: '3px solid var(--orange)' }}>
+              <div className="label" style={{ color: 'var(--orange)' }}>Chit Funds</div>
+              <div className="net-worth-number" style={{ fontSize: '24px' }}>{fmtMoney(chits.reduce((s, a) => s + Number(a.chit_total_value || a.amount || 0), 0))}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <span className="label" style={{ color: 'var(--text3)' }}>{chits.length} active · ₹{fmtMoney(monthlyOutflow)}/mo</span>
+              </div>
+            </div>
+          ) : null;
+        })()}
+
+        {/* Loans Given Card */}
+        {(() => {
+          const loans = assets.filter(a => a.type === 'LOAN_GIVEN' && (a.loan_status === 'outstanding' || a.loan_status === 'partially_returned'));
+          const totalOutstanding = loans.reduce((s, a) => s + Number(a.amount || 0) - Number(a.loan_partial_returned || 0), 0);
+          const overdue = loans.filter(a => a.loan_expected_return && new Date(a.loan_expected_return) < new Date()).length;
+          return loans.length > 0 ? (
+            <div className="card metric-card" style={{ borderLeft: '3px solid var(--red)' }}>
+              <div className="label" style={{ color: 'var(--red)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Loans Given
+                {overdue > 0 && <span style={{ background: 'var(--red)', color: '#fff', fontSize: '9px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '10px' }}>{overdue} overdue</span>}
+              </div>
+              <div className="net-worth-number" style={{ fontSize: '24px' }}>₹{fmtMoney(totalOutstanding)}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <span className="label" style={{ color: 'var(--text3)' }}>{loans.length} borrowers</span>
+              </div>
+            </div>
+          ) : null;
+        })()}
+
         <div 
           className="card" 
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px dashed var(--border2)' }}

@@ -24,6 +24,12 @@ export default function Reminders() {
   let items = assets.filter(a => a.maturity_date && getDays(a.maturity_date) > 0 && getDays(a.maturity_date) < 365)
                     .sort((a,b) => getDays(a.maturity_date) - getDays(b.maturity_date));
 
+  // Chit fund installment reminders
+  const chitReminders = assets.filter(a => a.type === 'CHIT' && !a.chit_already_received && (a.chit_current_month || 0) < (a.chit_total_months || 20));
+
+  // Loan overdue alerts
+  const loanOverdue = assets.filter(a => a.type === 'LOAN_GIVEN' && a.loan_status !== 'fully_returned' && a.loan_expected_return && new Date(a.loan_expected_return) < new Date(Date.now() + 7 * 86400000));
+
   const handlePreviewClick = (asset) => {
     if (!isPremium) {
       setPaywallOpen(true);
@@ -88,6 +94,60 @@ export default function Reminders() {
           );
         })}
       </div>
+
+      {/* Chit Fund Installment Reminders */}
+      {chitReminders.length > 0 && (
+        <div style={{ marginTop: '32px' }}>
+          <h3 className="section-title" style={{ marginBottom: '16px', fontSize: '16px', color: 'var(--orange)' }}>🔄 Chit Installments Due</h3>
+          <div className="reminders-grid">
+            {chitReminders.map(a => (
+              <div key={`chit-${a.id}`} className="reminder-card amber-tint" style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '24px' }}>🏦</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="section-title" style={{ fontSize: '14px' }}>{a.name}</div>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '4px', fontSize: '13px', color: 'var(--text2)' }}>
+                      <span>₹{new Intl.NumberFormat('en-IN').format(a.chit_monthly_installment || 0)}/month</span>
+                      <span>Month {a.chit_current_month || 1} of {a.chit_total_months || 20}</span>
+                    </div>
+                  </div>
+                  <span className="badge amber" style={{ fontSize: '12px' }}>Due 1st</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loan Overdue Alerts */}
+      {loanOverdue.length > 0 && (
+        <div style={{ marginTop: '32px' }}>
+          <h3 className="section-title" style={{ marginBottom: '16px', fontSize: '16px', color: 'var(--red)' }}>⚠ Loan Overdue Alerts</h3>
+          <div className="reminders-grid">
+            {loanOverdue.map(a => {
+              const overdueDays = Math.ceil((new Date() - new Date(a.loan_expected_return)) / 86400000);
+              const outstanding = Number(a.amount || 0) - Number(a.loan_partial_returned || 0);
+              return (
+                <div key={`loan-${a.id}`} className="reminder-card red-tint" style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '100%' }}>
+                    <div style={{ fontSize: '24px' }}>💸</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="section-title" style={{ fontSize: '14px' }}>{a.loan_borrower_name || a.name}</div>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '4px', fontSize: '13px', color: 'var(--text2)' }}>
+                        <span>₹{new Intl.NumberFormat('en-IN').format(outstanding)} outstanding</span>
+                        <span>{a.loan_borrower_relation}</span>
+                      </div>
+                    </div>
+                    <span className="badge red" style={{ fontSize: '12px' }}>
+                      {overdueDays > 0 ? `${overdueDays}d overdue` : 'Due soon'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {paywallOpen && <PaywallModal onClose={() => setPaywallOpen(false)} />}
 

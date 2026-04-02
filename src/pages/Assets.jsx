@@ -5,10 +5,11 @@ import { useGoals } from '../hooks/useGoals';
 import { supabase } from '../utils/supabase';
 import PaywallModal from '../components/PaywallModal';
 import RateComparisonTable from '../components/RateComparisonTable';
-import { Search, SortDesc, Download, X, Edit, Trash, ArrowRight, Wallet, Activity, IndianRupee, Home, Utensils, Bus, Zap, Clapperboard, HeartPulse, BellRing, MoreHorizontal, ShoppingCart, Check, Target } from 'lucide-react';
+import { Search, SortDesc, Download, X, Edit, Trash, ArrowRight, Wallet, Activity, IndianRupee, Home, Utensils, Bus, Zap, Clapperboard, HeartPulse, BellRing, MoreHorizontal, ShoppingCart, Check, Target, Clock, UserCheck, AlertCircle } from 'lucide-react';
 
 const typeColors = {
-  'FD': '#6db0e8', 'LIC': '#b48de8', 'SGB': '#e8c56d', 'MF': '#4ecb8d', 'PPF': '#e8685a'
+  'FD': '#6db0e8', 'LIC': '#b48de8', 'SGB': '#e8c56d', 'MF': '#4ecb8d', 'PPF': '#e8685a',
+  'CHIT': '#e8a06d', 'LOAN_GIVEN': '#e8685a'
 };
 
 const expenseCatColors = {
@@ -60,6 +61,7 @@ export default function Assets() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [sortBy, setSortBy] = useState('Maturity');
   const [selectedAsset, setSelectedAsset] = useState(null); // Right Drawer
+  const [modalType, setModalType] = useState('FD'); // Track type in modal for conditional fields
 
   const renderChip = (type, dict = typeColors) => {
     const hex = dict[type] || '#ffffff';
@@ -77,6 +79,7 @@ export default function Assets() {
     } else {
       setFormData({});
       setSelectedMembers([]);
+      setModalType('FD');
       setModalOpen(true);
     }
   };
@@ -121,6 +124,7 @@ export default function Assets() {
   const handleEdit = () => {
     setFormData(selectedAsset);
     setSelectedMembers(selectedAsset.members ? selectedAsset.members.map(m => m.id) : []);
+    setModalType(selectedAsset.type || 'FD');
     setSelectedAsset(null);
     setModalOpen(true);
   };
@@ -153,16 +157,32 @@ export default function Assets() {
     }
     setSaving(true);
     const formVals = new FormData(e.target);
+    const assetType = formVals.get('type');
     const payload = {
       name: formVals.get('name'),
-      type: formVals.get('type'),
+      type: assetType,
       amount: Number(formVals.get('amount')),
-      rate: Number(formVals.get('rate')) || 0,
+      rate: assetType === 'CHIT' || assetType === 'LOAN_GIVEN' ? 0 : (Number(formVals.get('rate')) || 0),
       start_date: formVals.get('start_date') || null,
       maturity_date: formVals.get('maturity_date') || null,
       notes: formVals.get('notes') || null,
       goal_id: formVals.get('goal_id') || null,
-      user_id: user.id
+      user_id: user.id,
+      // Chit Fund fields
+      chit_total_value: assetType === 'CHIT' ? (Number(formVals.get('chit_total_value')) || null) : null,
+      chit_monthly_installment: assetType === 'CHIT' ? (Number(formVals.get('chit_monthly_installment')) || null) : null,
+      chit_current_month: assetType === 'CHIT' ? (Number(formVals.get('chit_current_month')) || null) : null,
+      chit_total_months: assetType === 'CHIT' ? (Number(formVals.get('chit_total_months')) || 20) : null,
+      chit_receive_month: assetType === 'CHIT' ? (Number(formVals.get('chit_receive_month')) || null) : null,
+      chit_already_received: assetType === 'CHIT' ? (formVals.get('chit_already_received') === 'on') : false,
+      chit_organizer_name: assetType === 'CHIT' ? (formVals.get('chit_organizer_name') || null) : null,
+      // Loan fields
+      loan_borrower_name: assetType === 'LOAN_GIVEN' ? (formVals.get('loan_borrower_name') || null) : null,
+      loan_borrower_relation: assetType === 'LOAN_GIVEN' ? (formVals.get('loan_borrower_relation') || null) : null,
+      loan_given_date: assetType === 'LOAN_GIVEN' ? (formVals.get('loan_given_date') || null) : null,
+      loan_expected_return: assetType === 'LOAN_GIVEN' ? (formVals.get('loan_expected_return') || null) : null,
+      loan_status: assetType === 'LOAN_GIVEN' ? (formVals.get('loan_status') || 'outstanding') : null,
+      loan_partial_returned: assetType === 'LOAN_GIVEN' ? (Number(formVals.get('loan_partial_returned')) || 0) : 0,
     };
 
     try {
@@ -363,11 +383,11 @@ export default function Assets() {
               </div>
               
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '8px', background: 'var(--bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                  {['All', 'FD', 'LIC', 'SGB', 'MF', 'PPF'].map(f => (
+                <div style={{ display: 'flex', gap: '8px', background: 'var(--bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                  {['All', 'FD', 'LIC', 'SGB', 'MF', 'PPF', 'CHIT', 'LOAN_GIVEN'].map(f => (
                     <button key={f} className="btn-ghost" 
                       style={{ padding: '4px 12px', boxShadow: 'none', border: 'none', background: activeFilter === f ? 'transparent' : 'transparent', color: activeFilter === f ? 'var(--accent)' : 'var(--text2)', fontWeight: activeFilter === f ? 'bold' : 'normal' }}
-                      onClick={() => setActiveFilter(f)}>{f}</button>
+                      onClick={() => setActiveFilter(f)}>{f === 'LOAN_GIVEN' ? 'Loans' : f}</button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -558,38 +578,137 @@ export default function Assets() {
               <div style={{ display: 'grid', gap: '16px' }}>
                 <div>
                   <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Asset Type</label>
-                  <select name="type" className="form-control" required defaultValue={formData.type || 'FD'}>
+                  <select name="type" className="form-control" required defaultValue={formData.type || 'FD'} onChange={(e) => setModalType(e.target.value)}>
                     <option value="FD">Fixed Deposit (FD)</option>
                     <option value="LIC">LIC Policy</option>
                     <option value="SGB">SGB</option>
                     <option value="MF">Mutual Fund (MF)</option>
                     <option value="PPF">PPF / EPF</option>
+                    <option value="CHIT">Chit Fund</option>
+                    <option value="LOAN_GIVEN">Loan Given (Informal)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Name / Details</label>
-                  <input name="name" type="text" className="form-control" placeholder="e.g. SBI Savings FD" required defaultValue={formData.name || ''} />
+                  <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>{modalType === 'CHIT' ? 'Chit Name' : modalType === 'LOAN_GIVEN' ? 'Loan Description' : 'Name / Details'}</label>
+                  <input name="name" type="text" className="form-control" placeholder={modalType === 'CHIT' ? 'e.g. Ramu Committee 20L' : modalType === 'LOAN_GIVEN' ? 'e.g. Loan to Ravi' : 'e.g. SBI Savings FD'} required defaultValue={formData.name || ''} />
                 </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
-                    <input name="amount" type="number" className="form-control code-val" required defaultValue={formData.amount || ''} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Rate (%)</label>
-                    <input name="rate" type="number" step="0.1" className="form-control code-val" defaultValue={formData.rate || ''} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Start Date</label>
-                    <input name="start_date" type="date" className="form-control" defaultValue={formData.start_date || ''} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Maturity Date</label>
-                    <input name="maturity_date" type="date" className="form-control" defaultValue={formData.maturity_date || ''} />
-                  </div>
-                </div>
+
+                {/* === CHIT FUND SPECIFIC FIELDS === */}
+                {modalType === 'CHIT' && (
+                  <>
+                    <div>
+                      <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Chit Organizer / Committee</label>
+                      <input name="chit_organizer_name" type="text" className="form-control" placeholder="e.g. Ramu Uncle" defaultValue={formData.chit_organizer_name || ''} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Total Chit Value (₹)</label>
+                        <input name="chit_total_value" type="number" className="form-control code-val" placeholder="500000" defaultValue={formData.chit_total_value || ''} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Monthly Installment (₹)</label>
+                        <input name="chit_monthly_installment" type="number" className="form-control code-val" placeholder="25000" defaultValue={formData.chit_monthly_installment || ''} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Total Months</label>
+                        <input name="chit_total_months" type="number" className="form-control" defaultValue={formData.chit_total_months || 20} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Current Month #</label>
+                        <input name="chit_current_month" type="number" className="form-control" min="1" defaultValue={formData.chit_current_month || 1} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Pot Receive Month #</label>
+                        <input name="chit_receive_month" type="number" className="form-control" defaultValue={formData.chit_receive_month || ''} />
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '20px' }}>
+                        <input name="chit_already_received" type="checkbox" style={{ accentColor: 'var(--accent)' }} defaultChecked={formData.chit_already_received || false} />
+                        <label className="label" style={{ color: 'var(--text2)' }}>Already received pot</label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Amount (Your total committed, ₹)</label>
+                      <input name="amount" type="number" className="form-control code-val" required defaultValue={formData.amount || ''} />
+                    </div>
+                  </>
+                )}
+
+                {/* === INFORMAL LOAN SPECIFIC FIELDS === */}
+                {modalType === 'LOAN_GIVEN' && (
+                  <>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Borrower Name</label>
+                        <input name="loan_borrower_name" type="text" className="form-control" placeholder="Who owes you?" defaultValue={formData.loan_borrower_name || ''} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Relation</label>
+                        <select name="loan_borrower_relation" className="form-control" defaultValue={formData.loan_borrower_relation || 'Friend'}>
+                          {['Brother', 'Sister', 'Friend', 'Colleague', 'Neighbour', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Amount Lent (₹)</label>
+                      <input name="amount" type="number" className="form-control code-val" required defaultValue={formData.amount || ''} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Date Given</label>
+                        <input name="loan_given_date" type="date" className="form-control" defaultValue={formData.loan_given_date || ''} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Expected Return Date</label>
+                        <input name="loan_expected_return" type="date" className="form-control" defaultValue={formData.loan_expected_return || ''} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Status</label>
+                        <select name="loan_status" className="form-control" defaultValue={formData.loan_status || 'outstanding'}>
+                          <option value="outstanding">Outstanding</option>
+                          <option value="partially_returned">Partially Returned</option>
+                          <option value="fully_returned">Fully Returned</option>
+                          <option value="written_off">Written Off</option>
+                        </select>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Amount Returned So Far (₹)</label>
+                        <input name="loan_partial_returned" type="number" className="form-control code-val" defaultValue={formData.loan_partial_returned || 0} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* === STANDARD FIELDS (FD/LIC/SGB/MF/PPF) === */}
+                {modalType !== 'CHIT' && modalType !== 'LOAN_GIVEN' && (
+                  <>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
+                        <input name="amount" type="number" className="form-control code-val" required defaultValue={formData.amount || ''} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Rate (%)</label>
+                        <input name="rate" type="number" step="0.1" className="form-control code-val" defaultValue={formData.rate || ''} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Start Date</label>
+                        <input name="start_date" type="date" className="form-control" defaultValue={formData.start_date || ''} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Maturity Date</label>
+                        <input name="maturity_date" type="date" className="form-control" defaultValue={formData.maturity_date || ''} />
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="label" style={{ color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>Owners (Select Multiple)</label>
                   <div className="form-control" style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -752,6 +871,214 @@ export default function Assets() {
               })()}
               
               <div className="card" style={{ background: 'var(--bg3)', marginBottom: '24px' }}>
+                {/* === CHIT FUND DETAIL VIEW === */}
+                {selectedAsset?.type === 'CHIT' ? (() => {
+                  const totalMonths = selectedAsset.chit_total_months || 20;
+                  const currentMonth = selectedAsset.chit_current_month || 1;
+                  const receiveMonth = selectedAsset.chit_receive_month || totalMonths;
+                  const monthly = selectedAsset.chit_monthly_installment || 0;
+                  const chitVal = selectedAsset.chit_total_value || 0;
+                  const paidSoFar = currentMonth * monthly;
+                  const remaining = (totalMonths - currentMonth) * monthly;
+                  const pct = Math.round((currentMonth / totalMonths) * 100);
+                  const alreadyReceived = selectedAsset.chit_already_received;
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>TOTAL CHIT VALUE</div>
+                          <div className="code-val" style={{ fontSize: '24px', color: 'var(--orange)' }}>₹{fmtMoney(chitVal)}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="label" style={{ color: 'var(--text3)' }}>MONTHLY</div>
+                          <div className="code-val" style={{ fontSize: '16px' }}>₹{fmtMoney(monthly)}</div>
+                        </div>
+                      </div>
+                      {selectedAsset.chit_organizer_name && (
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', fontSize: '13px', color: 'var(--text2)' }}>
+                          Organizer: <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{selectedAsset.chit_organizer_name}</span>
+                        </div>
+                      )}
+
+                      {/* Progress Bar */}
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                        <div className="label" style={{ color: 'var(--text3)', marginBottom: '8px' }}>PROGRESS ({pct}%)</div>
+                        <div style={{ width: '100%', height: '10px', background: 'var(--bg)', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--orange)', borderRadius: '5px', transition: 'width 0.8s ease' }} />
+                          {/* Pot receive marker */}
+                          <div style={{ position: 'absolute', left: `${(receiveMonth / totalMonths) * 100}%`, top: '-4px', width: '2px', height: '18px', background: 'var(--accent)' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text3)', marginTop: '4px' }}>
+                          <span>Month 1</span>
+                          <span style={{ color: 'var(--accent)' }}>⭐ Pot: M{receiveMonth}</span>
+                          <span>Month {totalMonths}</span>
+                        </div>
+                      </div>
+
+                      {/* Vertical Timeline */}
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                        <div className="label" style={{ color: 'var(--text3)', marginBottom: '12px' }}>TIMELINE</div>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {Array.from({ length: totalMonths }, (_, i) => {
+                            const m = i + 1;
+                            const isCurrent = m === currentMonth;
+                            const isPot = m === receiveMonth;
+                            const isPast = m < currentMonth;
+                            return (
+                              <div key={m} title={`Month ${m}${isPot ? ' (Pot)' : ''}`} style={{
+                                width: '24px', height: '24px', borderRadius: '6px', fontSize: '9px', fontWeight: 'bold',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: isPot ? 'var(--accent)' : isCurrent ? 'var(--orange)' : isPast ? 'rgba(232, 160, 109, 0.2)' : 'var(--bg)',
+                                color: isPot ? 'var(--bg)' : isCurrent ? '#fff' : isPast ? 'var(--orange)' : 'var(--text3)',
+                                border: isCurrent ? '2px solid #fff' : '1px solid var(--border)'
+                              }}>
+                                {isPot ? '⭐' : m}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Calculations */}
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>PAID SO FAR</div>
+                          <div className="code-val" style={{ color: 'var(--text2)' }}>₹{fmtMoney(paidSoFar)}</div>
+                        </div>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>REMAINING</div>
+                          <div className="code-val" style={{ color: 'var(--red)' }}>₹{fmtMoney(remaining)}</div>
+                        </div>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>MONTHS LEFT</div>
+                          <div className="code-val">{totalMonths - currentMonth}</div>
+                        </div>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>POT STATUS</div>
+                          <div className="code-val" style={{ color: alreadyReceived ? 'var(--green)' : 'var(--accent)' }}>
+                            {alreadyReceived ? '✓ Received' : `Pending (M${receiveMonth})`}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+
+                /* === LOAN GIVEN DETAIL VIEW === */
+                : selectedAsset?.type === 'LOAN_GIVEN' ? (() => {
+                  const outstanding = Number(selectedAsset.amount || 0) - Number(selectedAsset.loan_partial_returned || 0);
+                  const givenDate = selectedAsset.loan_given_date ? new Date(selectedAsset.loan_given_date) : null;
+                  const expectedDate = selectedAsset.loan_expected_return ? new Date(selectedAsset.loan_expected_return) : null;
+                  const daysOut = givenDate ? Math.ceil((new Date() - givenDate) / 86400000) : 0;
+                  const isOverdue = expectedDate && expectedDate < new Date();
+                  const overdueDays = isOverdue ? Math.ceil((new Date() - expectedDate) / 86400000) : 0;
+
+                  const handleMarkReturned = async () => {
+                    if (!window.confirm('Mark this loan as fully returned?')) return;
+                    await supabase.from('assets').update({
+                      loan_status: 'fully_returned',
+                      loan_partial_returned: selectedAsset.amount
+                    }).eq('id', selectedAsset.id);
+                    reloadData();
+                    setSelectedAsset(null);
+                  };
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div>
+                        <div className="label" style={{ color: 'var(--text3)' }}>BORROWER</div>
+                        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: '24px', color: 'var(--text)' }}>
+                          {selectedAsset.loan_borrower_name || 'Unknown'}
+                        </div>
+                        {selectedAsset.loan_borrower_relation && (
+                          <span style={{ fontSize: '12px', color: 'var(--text2)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
+                            {selectedAsset.loan_borrower_relation}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>AMOUNT LENT</div>
+                          <div className="code-val" style={{ fontSize: '24px', color: 'var(--red)' }}>₹{fmtMoney(selectedAsset.amount)}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="label" style={{ color: 'var(--text3)' }}>NET OUTSTANDING</div>
+                          <div className="code-val" style={{ fontSize: '20px', color: outstanding > 0 ? 'var(--red)' : 'var(--green)' }}>
+                            ₹{fmtMoney(outstanding)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Days counter */}
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <Clock size={14} color={isOverdue ? 'var(--red)' : 'var(--text2)'} />
+                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: isOverdue ? 'var(--red)' : 'var(--text2)' }}>
+                            {daysOut > 0 ? `Outstanding for ${daysOut} days` : 'Just given'}
+                          </span>
+                        </div>
+                        {isOverdue && (
+                          <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(232, 104, 90, 0.1)', border: '1px solid rgba(232, 104, 90, 0.2)', fontSize: '13px', color: 'var(--red)', fontWeight: 'bold' }}>
+                            ⚠ Overdue by {overdueDays} days
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Timeline */}
+                      {givenDate && (
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                          <div className="label" style={{ color: 'var(--text3)', marginBottom: '12px' }}>LOAN TIMELINE</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--green)' }} />
+                              <div style={{ fontSize: '9px', color: 'var(--text3)', marginTop: '4px' }}>Given</div>
+                              <div style={{ fontSize: '9px', color: 'var(--text2)' }}>{givenDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                            </div>
+                            <div style={{ flex: 1, height: '2px', background: isOverdue ? 'var(--red)' : 'var(--border)' }} />
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg)' }} />
+                              <div style={{ fontSize: '9px', color: 'var(--text3)', marginTop: '4px' }}>Today</div>
+                            </div>
+                            {expectedDate && (
+                              <>
+                                <div style={{ flex: 1, height: '2px', background: 'var(--border)' }} />
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: isOverdue ? 'var(--red)' : 'var(--text3)' }} />
+                                  <div style={{ fontSize: '9px', color: 'var(--text3)', marginTop: '4px' }}>Expected</div>
+                                  <div style={{ fontSize: '9px', color: isOverdue ? 'var(--red)' : 'var(--text2)' }}>{expectedDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status + Actions */}
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div className="label" style={{ color: 'var(--text3)' }}>STATUS</div>
+                          <span style={{
+                            padding: '4px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold',
+                            background: selectedAsset.loan_status === 'fully_returned' ? 'rgba(78,203,141,0.1)' : selectedAsset.loan_status === 'written_off' ? 'rgba(232,104,90,0.1)' : 'rgba(232,197,109,0.1)',
+                            color: selectedAsset.loan_status === 'fully_returned' ? 'var(--green)' : selectedAsset.loan_status === 'written_off' ? 'var(--red)' : 'var(--accent)'
+                          }}>
+                            {selectedAsset.loan_status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Outstanding'}
+                          </span>
+                        </div>
+                        {selectedAsset.loan_status !== 'fully_returned' && (
+                          <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={handleMarkReturned}>
+                            <UserCheck size={14} /> Mark Returned
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+
+                /* === DEFAULT DETAIL VIEW (FD/LIC/SGB/MF/PPF) === */
+                : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <div className="label" style={{ color: 'var(--text3)' }}>PRINCIPAL AMOUNT</div>
@@ -770,6 +1097,7 @@ export default function Assets() {
                     )}
                   </div>
                 </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
