@@ -5,12 +5,8 @@ import Sidebar from './Sidebar';
 export default function Layout() {
   return (
     <>
-      {/* Liquid Glass Ambient Background */}
-      <div className="ambient-container">
-        <div className="ambient-blob-gold"></div>
-        <div className="ambient-blob-blue"></div>
-        <div className="ambient-blob-purple"></div>
-      </div>
+      {/* 3D Liquid Image Background */}
+      <div className="ambient-image-bg"></div>
 
       <div className="app-container">
         <Sidebar />
