@@ -4,11 +4,20 @@ import Sidebar from './Sidebar';
 
 export default function Layout() {
   return (
-    <div className="app-container">
-      <Sidebar />
-      <main className="main-content fade-in">
-        <Outlet />
-      </main>
-    </div>
+    <>
+      {/* Liquid Glass Ambient Background */}
+      <div className="ambient-container">
+        <div className="ambient-blob-gold"></div>
+        <div className="ambient-blob-blue"></div>
+        <div className="ambient-blob-purple"></div>
+      </div>
+
+      <div className="app-container">
+        <Sidebar />
+        <main className="main-content fade-in">
+          <Outlet />
+        </main>
+      </div>
+    </>
   );
 }
