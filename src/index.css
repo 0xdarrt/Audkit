@@ -729,11 +729,8 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.03); }
     border: 1px solid #000 !important;
     color: #000 !important;
     background: transparent !important;
-  }
-}
-
-/* 3D Liquid Image Background */
-.ambient-image-bg {
+/* Ambient Glass Background */
+.ambient-container {
   position: fixed;
   top: 0;
   left: 0;
@@ -741,15 +738,57 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.03); }
   height: 100vh;
   z-index: -1;
   pointer-events: none;
-  background-image: url('/3d-bg.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  animation: slow-pan 45s ease-in-out infinite alternate;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 30%, #1a1a24 0%, #0d0d12 40%, #050508 100%);
 }
 
-@keyframes slow-pan {
-  0% { transform: scale(1) translate(0%, 0%); }
-  50% { transform: scale(1.08) translate(-1%, -1%); filter: hue-rotate(5deg) brightness(1.1); }
-  100% { transform: scale(1.04) translate(1%, 1%); }
+@keyframes drift-gold {
+  0% { transform: translate(0vw, 0vh) scale(1); }
+  50% { transform: translate(15vw, 15vh) scale(1.2); }
+  100% { transform: translate(0vw, 0vh) scale(1); }
+}
+
+@keyframes drift-blue {
+  0% { transform: translate(0vw, 0vh) scale(1); }
+  50% { transform: translate(-20vw, 20vh) scale(1.5); }
+  100% { transform: translate(0vw, 0vh) scale(1); }
+}
+
+@keyframes drift-purple {
+  0% { transform: translate(0vw, 0vh) scale(1); }
+  50% { transform: translate(-10vw, -15vh) scale(1.1); }
+  100% { transform: translate(0vw, 0vh) scale(1); }
+}
+
+.ambient-blob-gold {
+  position: absolute;
+  top: -10vh;
+  right: -5vw;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(232, 197, 109, 0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: drift-gold 20s ease-in-out infinite;
+}
+
+.ambient-blob-blue {
+  position: absolute;
+  bottom: -20vh;
+  left: -10vw;
+  width: 70vw;
+  height: 70vw;
+  background: radial-gradient(circle, rgba(56, 115, 219, 0.45) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: drift-blue 25s ease-in-out infinite;
+}
+
+.ambient-blob-purple {
+  position: absolute;
+  top: 30vh;
+  left: 40vw;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(169, 114, 252, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: drift-purple 22s ease-in-out infinite;
 }
