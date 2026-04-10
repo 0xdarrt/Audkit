@@ -5,6 +5,7 @@ import { useGoals } from '../hooks/useGoals';
 import { supabase } from '../utils/supabase';
 import PaywallModal from '../components/PaywallModal';
 import RateComparisonTable from '../components/RateComparisonTable';
+import AIAdvisorCard from '../components/AIAdvisorCard';
 import { Search, SortDesc, Download, X, Edit, Trash, ArrowRight, Wallet, Activity, IndianRupee, Home, Utensils, Bus, Zap, Clapperboard, HeartPulse, BellRing, MoreHorizontal, ShoppingCart, Check, Target, Clock, UserCheck, AlertCircle } from 'lucide-react';
 
 const typeColors = {
@@ -1145,6 +1146,16 @@ export default function Assets() {
                     onPaywall={() => setPaywallOpen(true)}
                   />
                 </div>
+              )}
+
+              {/* AI MATURITY ADVISOR — only for FDs within 60 days of maturity */}
+              {selectedAsset?.type === 'FD' && getDays(selectedAsset?.maturity_date) > 0 && getDays(selectedAsset?.maturity_date) <= 60 && (
+                <AIAdvisorCard
+                  asset={selectedAsset}
+                  allAssets={assets}
+                  isPremium={isPremium}
+                  onPaywall={() => setPaywallOpen(true)}
+                />
               )}
             </div>
 

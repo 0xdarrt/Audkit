@@ -51,7 +51,7 @@ const projectAssetValue = (asset, years) => {
 };
 
 export default function Dashboard() {
-  const { user, isPremium } = useAuth();
+  const { user, isPremium, onboardingCompleted, setOnboardingCompleted } = useAuth();
   const { assets, members, loading } = useData();
   const { goals } = useGoals();
   const navigate = useNavigate();
@@ -143,6 +143,25 @@ export default function Dashboard() {
   return (
     <div className="screen fade-in active">
       {showRain && <RupeeRain delta={rainDelta} onComplete={() => setShowRain(false)} />}
+
+      {/* Resume onboarding banner */}
+      {!onboardingCompleted && (
+        <div style={{
+          padding: '12px 20px', borderRadius: '12px', marginBottom: '20px',
+          background: 'linear-gradient(135deg, rgba(232, 197, 109, 0.08), rgba(232, 197, 109, 0.02))',
+          border: '1px solid rgba(232, 197, 109, 0.15)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div style={{ fontSize: '13px', color: 'var(--accent)' }}>
+            ✨ Complete your setup to unlock your health score
+          </div>
+          <button className="btn-ghost" onClick={() => setOnboardingCompleted(false)}
+            style={{ padding: '6px 14px', fontSize: '11px', color: 'var(--accent)', borderColor: 'rgba(232, 197, 109, 0.2)' }}>
+            Resume setup →
+          </button>
+        </div>
+      )}
+
       <div className="dash-header">
         <div>
           <div className="welcome-text">
@@ -276,11 +295,25 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Section Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '40px 0 24px' }}>
+        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }} />
+        <span className="label" style={{ color: 'var(--text3)', letterSpacing: '2px' }}>GOALS & HEALTH</span>
+        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }} />
+      </div>
+
       {/* Goals Section */}
       <GoalsSection assets={assets} onPaywall={() => setPaywallOpen(true)} />
 
       {/* Health Score Widget */}
       <HealthScoreWidget assets={assets} members={members} goals={goals} onPaywall={() => setPaywallOpen(true)} />
+
+      {/* Section Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '40px 0 24px' }}>
+        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }} />
+        <span className="label" style={{ color: 'var(--text3)', letterSpacing: '2px' }}>ANALYTICS</span>
+        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }} />
+      </div>
 
       <div className="chart-row">
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
